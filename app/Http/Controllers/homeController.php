@@ -2,130 +2,160 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\registerRequest;
+use App\Http\Requests\TodoRequest;
+use App\Http\Requests\updateNameRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\NewUser;
 use App\Models\User;
-use App\Models\data;
-use illuminate\support\facades\auth;
+use App\Models\Data;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
-class homeController extends Controller
+class HomeController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    //show Register Page
     public function index()
     {
-        return Inertia::render('test');
+        return Inertia::render('RegisterPage');
     }
-    public function register(request $request){
-            $json=[
-                'name' => $request->input('name'),
-                'password' => $request->input('password'),
-                'email' => $request->input('email'),
-            ];
-            $validated = $request->validate([
-                'name' => 'required|max:10',
-                'password' => 'required|max:8',
-                'email' => 'required|email',
-            ]);
-            $User = User::create($validated);
-            return response()->json(["message"=>"User Registered Succesfully"]);
-        }  
-
-public function logins(){
-    return Inertia::render('login');
-}
-
-public function login(Request $request)
+   // store data from register form
+   public function register(RegisterRequest $request)
 {
-    $validated = $request->validate([
-        'name' => 'required',
-        'password' => 'required',
+    $validated = $request->validated();
+
+    $existingUser = User::where('email', $validated['email'])->first();
+    if ($existingUser) {
+        return response()->json([
+            'message' => 'Email already exists',
+            'errors' => ['email' => ['Email already exists']],
+        ], 422); 
+    }
+    
+    $user = User::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'password' => bcrypt($validated['password']),
     ]);
-    if (Auth::attempt($validated)) {
-        return response()->json(["message"=>"User logged in Succesfully"]);
-        return redirect()->route('home');
-    } else {
-        return response()->json(["error" => "Invalid Credentials"], 401);
-    }
-}
-
-
-public function home(){
-           return inertia::render('Homepage/Main');
-    }
-    public function get_user(){
-        $user = auth()->user();
-        return response()->json(["user"=>$user]);
-    }
-      
-                   
-    public function store(Request $request)
-    {
-        $json=[
-            'stored_data' => $request->input('stored_data'),
-        ];
-        $validated = $request->validate(
-            [
-                'stored_data' => 'required|max:100',
-            ]
-            );
-
-             $data = new data();
-             $data->stored_data = $request->input('stored_data');
-             $data->save();
-            return response()->json([
-                'message' => 'Data stored successfully',
-            ]);
-            }
-
-    public function show()
-    {
-        $data = data::all();
-        return response()->json([
-            'data' => $data,
-        ]);
-    }
-
-    public function delete( $id)
-   {
-    $data = data::find($id);
-    $data->delete();
     return response()->json([
-        'message' => 'Data deleted successfully',
-    ])
-    ->setStatusCode(200);
-}
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+        'message' => 'User Registered Successfully',
+        'status' => true,
+        'token' => $user->createToken("API Token")->plainTextToken,
+    ]);
+} 
+
+    //show login form
+    public function logins()
     {
-        $data = data::find($id);
-        return response()->json([
-            'data' => $data,
-        ]);
+        return Inertia::render('login');
     }
 
-    public function update(Request $request, string $id)
+    //check data from
+    public function login(Request $request)
     {
-        $data = data::find($id);
-        $data->stored_data = $request->input('stored_data');
+        $credentials = $request->only(['name', 'password']);
+
+        if (!Auth::attempt($credentials)) {
+            return response()->json(['message' => 'Invalid Credentials']);
+        }
+        $User_id = Auth::user()->id;
+        $user = User::where('name', $credentials['name'])->first();
+
+        return response()->json([
+            'message' => 'User logged in successfully',
+            'status' => true,
+            'token' => $user->createToken("API Token")->plainTextToken,
+            'user' => $user
+        ]);
+    }
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        // $request->user()->tokens()->delete();
+        return response()->json(['message' => 'User logged out successfully']);
+    }
+
+
+    public function home()
+    {
+        $User_id = auth::id();
+        $user = User::where('id', $User_id)->first();
+        $token=$user->createtoken("API  Token")->plainTextToken;
+        return Inertia::render('Homepage/Mainpage', ['user' => $user],['token'=>$token]);
+    }
+
+    public function store(TodoRequest  $request)
+    {
+     $validated=$request->validated();   
+         $data = new Data();
+        $data->stored_data = $validated['stored_data'];
+        $data->User_id=$validated['userID'];
         $data->save();
-        return response()->json([
-            'message' => 'Data updated successfully',
-            ]);
+        return response()->json(['message' => 'Data stored successfully',
+        'data'=>
+        [
+            'stored_data'=>$validated['stored_data'],
+        ]
+    ]);
     }
 
+    public function show($userId)
+    {
+        $data = Data::where('user_id', $userId)->get();
+        return response()->json(['data' => $data]);
+    }
+    public function showing()
+    {
+        return Inertia::render('Homepage/showing_data');
+    }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-  public function logout(){
-    auth()->logout();
-    return response()->json([
-        'message' => 'Logged out successfully',
-    ]);
-  }
+    public function delete($id)
+    {
+        $data = Data::findOrFail($id);
+        $data->delete();
+        return response()->json(['message' => 'Data deleted successfully']);
+    }
+
+    public function edit($id)
+    {
+        $data = Data::findOrFail($id);
+        return response()->json(['data' => $data]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        
+        $data = Data::findOrFail($id);
+        $data->stored_data = $request['stored_data'];
+        $data->save();
+
+        return response()->json(['message' => 'Data updated successfully']);
+    }
+    public function update_username(updateNameRequest $request ,$id)
+    {
+        $validated = $request->validated();
+        $oldname= User::where('id',$id)->value('name');
+            $data = User::findOrFail($id);
+            $data->name = $validated['name'];
+            $data->save();
+            $newname=$data->name;
+            return response()->json(
+            [
+                'message' => 'Username updated successfully  from '.$oldname.' to '.$newname,
+            ]);
+    }
+    public function update_password(request $request,$id)
+    {
+        $user = User::where('id',$id)->first();
+        if (Hash::check($request->old_password, $user->password)) {
+            $user->password = Hash::make($request->new_password);
+            $user->save();
+            return response()->json(['message' => 'Password updated successfully']);
+            } else {
+                return response()->json(['error' => 'Old Password is Incorrect']);
+            }
+        }
+
+       
+   
 }

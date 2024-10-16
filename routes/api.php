@@ -1,34 +1,34 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\homeController;
-use App\Http\middleware\Authenticate;
-use Inertia\Inertia;
+use App\Http\Controllers\HomeController;
+use Inertia\Inertia; 
+use Illuminate\Http\Request;
 
+Route::get('/user',function(Request $Request){
+    return $Request->user();
+})->middleware('auth::sanctum');
 
-//login-authentication
-Route::get("/", function(){
-    return Inertia::render('test');
+Route::middleware("auth:sanctum")->group(function()
+{
+    Route::get('/home', [HomeController::class, 'home'])->name('home');
 });
-Route::post('/post',[homeController::class,"register"]);
-Route::get('/login',[homeController::class,"logins"]);
-Route::post('/post',[homeController::class,"register"]);
-route::post('/login',[homeController::class,"login"]);
 
-//Home or Main 
-Route::get('/home',[homeController::class,"home"])->name("home");
-Route::post('/home',[homeController::class,"store"]) ;
 
-route::get('/show',[homeController::class,"show"]);
-route::get('getdata',[homeController::class,"get_user"]);
+Route::post('/home',[HomeController::class,'store']);
 
-//delete data
-Route::delete("/delete/{id}",[homeController::class,"delete"]) ;
-//update data
-Route::get("/edit/{id}",[homeController::class,"edit"]) ;
-Route::put("/update/{id}",[homeController::class,"update"]) ;
-//logout
-Route::get("/logout",[homeController::class,"logout"]);
+Route::post('/login', [HomeController::class, 'login']);
+
+Route::post('/post', [HomeController::class, 'register']);
+
+Route::delete('/delete/{id}', [HomeController::class, 'delete']);
+
+Route::put('/update/{id}', [HomeController::class, 'update']);
+
+Route::post('/update_username/{id}',[HomeController::class,'update_username']);
+Route::post('/update_password/{id}',[HomeController::class,'update_password']);
+
+Route::post('/logout', [HomeController::class, 'logout']);
+
 
 

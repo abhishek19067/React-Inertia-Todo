@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import "./Css/test.css";
-import Headers from "./componets/header";
+
+import Headers from "./Login/signup/loginheader";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -21,16 +21,35 @@ export default function Register() {
     }
 
     function handleSubmit(e) {
-        e.preventDefault(); 
+        e.preventDefault();
         const data = values;
-        axios.post("/api/post", data).then((response) => {
-            console.log(response);
-            toast.success("Account Register Successfully");
-            setTimeout(() => {
-                window.location.href = "/login";
-            }, 2000);
-        });
+    
+        axios.post("/api/post", data)
+            .then((response) => {
+                console.log(response);
+                console.log(response.data.token);
+                toast.success("Account Register Successfully");
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 2000);
+            })
+            .catch((err) => {
+                console.log(err.response);
+                const errorMessage = err.response.data.message;
+                if (err.response.data.errors.email) {
+                    toast.error("Email: " + err.response.data.errors.email[0]); 
+                }
+                
+                if (err.response.data.errors.name) {
+                    toast.error("Name: " + err.response.data.errors.name[0]);
+                }
+                
+                if (err.response.data.errors.password) {
+                    toast.error("Password: " + err.response.data.errors.password[0]);
+                }
+            });
     }
+    
 
     return (
         <div>
@@ -40,7 +59,7 @@ export default function Register() {
                 <h1>Registration Page</h1>
             </center>
 
-            <div className="container">
+            <div className="container" >
                 <div className="con  mb-3">
                     <form onSubmit={handleSubmit}>
                         <div className="mb-3 mt-3">
@@ -64,9 +83,7 @@ export default function Register() {
                             value={values.password}
                             className="form-controls"
                             onChange={handleChange}
-                            type='{
-      passowrd ? "text" : "password"
-      }'
+                            type="password"
                             style={{ width: "400px" }}
                             required
                         />
@@ -75,6 +92,7 @@ export default function Register() {
                             Email
                         </label>
                         <input
+                        type="email"
                             id="email"
                             className="form-controls"
                             value={values.email}
@@ -85,7 +103,7 @@ export default function Register() {
                         <center>
                             {" "}
                             <button type="submit" className="btn btn-dark">
-                                Submit
+                                Register
                             </button>
                         </center>
                     </form>

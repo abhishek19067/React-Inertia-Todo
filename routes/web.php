@@ -3,25 +3,32 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 
-use Inertia\Inertia; 
+use Inertia\Inertia;
 
-Route::redirect('/','/api');
-route::redirect('login','/api/login');
-route::redirect('/home','/api/home');
-route::redirect('/homes','/api/home');
+use Illuminate\Http\Request;
 
+Route::get('/user', function (Request $Request) {
+    return $Request->user();
+})->middleware('auth::sanctum');
 
-
-
-// Route::get('/', [HomeController::class, 'index']) ;
-// Route::post('/post',[HomeController::class,'register'])->middleware('json'); 
-// route::get('/login',[HomeController::class,"logins"]);
+Route::redirect('/', '/api');
 
 
+Route::get('/', [HomeController::class, 'index']);
+
+Route::group(['middleware' => ['auth:sanctum']], function () {
+    Route::get('/home', [HomeController::class, 'home'])->name('home');
+    Route::get('/show', [HomeController::class, 'show']);
+    Route::get('/Saved_Data', [HomeController::class, 'showing'])->name('Saved_data');
+    Route::get('/getdata', [HomeController::class, 'get_user']);
+    Route::get('/edit/{id}', [HomeController::class, 'edit']);
+    Route::get('/show/{userId}', [HomeController::class, 'show']);
+});
 
 
-    
+
+Route::get('/login', [HomeController::class, 'logins'])->name('login');
 
 
-    
+
 
